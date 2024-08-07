@@ -5,24 +5,29 @@ import com.MSP.shopydrop.Enum.LoginType;
 import com.MSP.shopydrop.Enum.UserType;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public interface UsersService {
 
-    Users addUser(Users users);
+    String signupUser(Users user);
 
-    Users updateUser(Users users, Long id);
+    void sendVerificationEmail(String email);
 
-    Users getUserById(Long id);
+    void verifyEmailToken(String token);
 
-    Users getUserLoginType(LoginType loginType);
+    Users loginUser(String email, String password);
 
-    Users getUserType(UserType userType);
+    Optional<Users> getUser(Long id);
 
-    List<Users> getAllUsers();
+    Users updateUser(Long id, Users user);
 
-    boolean deleteUser(Long id);
+    void deleteUser(Long id);
 
-    List<Users> getUsersByUserTypeSorted(UserType userType);
+    void forgetPassword(String email);
+
+    void verifyPasswordResetCode(int verificationCode);
+
+    void resetPassword(String newPassword);
 }
 

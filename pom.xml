@@ -89,6 +89,11 @@
 			<artifactId>dotenv-java</artifactId>
 			<version>2.2.2</version>
 		</dependency>
+		<!-- added for java mail-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
 	</dependencies>
 
 	<build>

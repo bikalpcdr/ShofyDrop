@@ -2,9 +2,11 @@ package com.MSP.shopydrop.Repository;
 
 import com.MSP.shopydrop.Entity.Subscription;
 import com.MSP.shopydrop.Enum.SubscriptionStatus;
+import org.springframework.data.jpa.repository.JpaRepository;
+
 import java.util.List;
 
-public interface SubscriptionRepo{
+public interface SubscriptionRepo extends JpaRepository<Subscription,Long> {
     // Add a new subscription
     Subscription add(Subscription subscription);
 

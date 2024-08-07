@@ -34,6 +34,9 @@ public class Users implements UserDetails {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
+    @Column(name = "is_emailVerified", columnDefinition = "CHAR(1) default 'N'", nullable = false)
+    private char isEmailVerified;
+
     @Column(nullable = false, length = 255)
     private String password;
 
