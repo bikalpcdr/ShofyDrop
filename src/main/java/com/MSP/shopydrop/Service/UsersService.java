@@ -29,5 +29,7 @@ public interface UsersService {
     void verifyPasswordResetCode(int verificationCode);
 
     void resetPassword(String newPassword);
+
+    List<Users> getAllUsers();
 }
 

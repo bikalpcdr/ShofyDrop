@@ -60,7 +60,7 @@ public class UserServiceImpl implements UsersService {
     public void sendVerificationEmail(String email) {
         try {
             Users user = usersRepo.findByEmail(email)
-                    .orElseThrow(()-> new ResourceNotFoundException("Email doesn't exist with this email"+email));
+                    .orElseThrow(()-> new ResourceNotFoundException("Email","username",email));
             if (user.getIsEmailVerified() == 'Y'){
                 throw new EmailRelatedException("Email is already verified. Please for proceed for login");
             }
@@ -89,26 +89,29 @@ public class UserServiceImpl implements UsersService {
     @Transactional
     public void verifyEmailToken(String token) {
         try {
-            UsersVerification usersVerification = usersVerificationRepo.findByToken(token).orElseThrow(() -> new IllegalStateException("Invalid verification token."));
+            UsersVerification usersVerification = usersVerificationRepo.findByToken(token)
+                    .orElseThrow(() -> new IllegalStateException("Invalid verification token."));
 
-            List<UsersVerification> allTokens = usersVerificationRepo.findAllTokensByUser(usersVerification.getUsers().getId());
+            Optional<UsersVerification> allTokens = usersVerificationRepo.findByToken(String.valueOf(usersVerification.getUsers().getId()));
             if (allTokens.isEmpty()) {
                 throw new IllegalStateException("No verification tokens found for user.");
             }
 
-            UsersVerification latestToken = allTokens.get(0);
+            UsersVerification latestToken = allTokens.get();
             if (!latestToken.getToken().equals(token)) {
                 throw new IllegalStateException("This is not the latest verification token.");
             }
             if (latestToken.getExpiredAt().toInstant().isBefore(Instant.now())) {
                 throw new IllegalStateException("Verification token expired.");
             }
-            Users fetchUser = usersRepo.findById(latestToken.getUsers().getId()).orElseThrow(() -> new ResourceNotFoundException("User doesn't exist with this id:" + latestToken.getUsers().getId()));
+
+            Users fetchUser = usersRepo.findById(latestToken.getUsers().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User doesn't exist with this id:","",0L));
             fetchUser.setIsEmailVerified('Y');
             fetchUser.setUpdatedAt(Timestamp.from(Instant.now()));
             usersRepo.save(fetchUser);
 
-            usersVerificationRepo.deleteByUserId(usersVerification.getUsers().getId());
+            usersVerificationRepo.deleteById(usersVerification.getUsers().getId());
         } catch (IllegalStateException | ResourceNotFoundException e) {
             throw e;
         } catch (Exception e) {
@@ -120,14 +123,14 @@ public class UserServiceImpl implements UsersService {
     @Transactional
     public Users loginUser(String email, String password) {
         try {
-            Users user = usersRepo.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("Email don't match."));
+            Users user = usersRepo.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("Email","email",email));
             if (user.getPassword().equals(DigestUtils.md5DigestAsHex(password.getBytes()))) {
                 if (user.getIsEmailVerified() == 'N') {
                     throw new IllegalStateException("User is not verified, please verify your email before login.");
                 }
                 return user;
             } else {
-                throw new ResourceNotFoundException("Password don't match.");
+                throw new ResourceNotFoundException("Email","UserName",email);
             }
         } catch (ResourceNotFoundException | IllegalStateException e) {
             throw e;
@@ -142,7 +145,7 @@ public class UserServiceImpl implements UsersService {
         try {
             Optional<Users> user = usersRepo.findById(id);
             if (user.isEmpty()) {
-                throw new ResourceNotFoundException("User not found wit id: " + id);
+                throw new ResourceNotFoundException("User","UserId",id);
             }
             return user;
         } catch (ResourceNotFoundException e) {
@@ -155,7 +158,7 @@ public class UserServiceImpl implements UsersService {
     @Override
     public Users updateUser(Long id, Users users) {
         try {
-            Users existingUser = usersRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+            Users existingUser = usersRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("User","userId",id));
             existingUser.setName(users.getName());
             existingUser.setEmail(users.getEmail());
 
@@ -173,7 +176,7 @@ public class UserServiceImpl implements UsersService {
     public void deleteUser(Long id) {
         try {
             if (!usersRepo.existsById(id)) {
-                throw new ResourceNotFoundException("User not found with id: " + id);
+                throw new ResourceNotFoundException("User","userId",id);
             }
             usersRepo.deleteById(id);
         } catch (ResourceNotFoundException e) {
@@ -187,7 +190,7 @@ public class UserServiceImpl implements UsersService {
     @Transactional
     public void forgetPassword(String email) {
         try {
-            Users users = usersRepo.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User doesn't exist with this email: " + email));
+            Users users = usersRepo.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("Email ","username", email));
             if (users.getIsEmailVerified() == 'N') {
                 throw new EmailRelatedException("Email is not verified. Please verify your email before requesting for resetting password,");
             }
@@ -203,7 +206,7 @@ public class UserServiceImpl implements UsersService {
 
             forgetPasswordRepo.save(forgetPassword);
 
-            mailUtils.forgetPasswordVerificationCode(email, users.getName(), verificationCode);
+            mailUtils.forgetPasswordVerificationCode(email, users.getName(), String.valueOf(verificationCode));
         } catch (EmailRelatedException | ResourceNotFoundException e) {
             try {
                 throw e;
@@ -234,7 +237,7 @@ public class UserServiceImpl implements UsersService {
                 throw new IllegalStateException("Password verification code expired.");
             }
 
-            Users users = usersRepo.findById(forgetPassword.getUsers().getId()).orElseThrow(() -> new ResourceNotFoundException("User doesn't exist with Id: " + forgetPassword.getUsers().getId()));
+            Users users = usersRepo.findById(forgetPassword.getUsers().getId()).orElseThrow(() -> new ResourceNotFoundException("Verification","COde",verificationCode));
             latestCode.setIsVerified("Y");
             forgetPasswordRepo.save(latestCode);
             usersRepo.save(users);
@@ -250,9 +253,9 @@ public class UserServiceImpl implements UsersService {
     @Transactional
     public void resetPassword(String newPassword) {
         try {
-            ForgetPassword forgetPassword = forgetPasswordRepo.findByIsVerified("Y").orElseThrow(() -> new ResourceNotFoundException("Password reset code is not verified."));
+            ForgetPassword forgetPassword = forgetPasswordRepo.findByIsVerified("Y").orElseThrow(() -> new ResourceNotFoundException("Password","password",newPassword));
 
-            Users users = usersRepo.findById(forgetPassword.getUsers().getId()).orElseThrow(() -> new ResourceNotFoundException("User doesn't exist with this Id."));
+            Users users = usersRepo.findById(forgetPassword.getUsers().getId()).orElseThrow(() -> new ResourceNotFoundException("User","userId",forgetPassword));
             users.setPassword(DigestUtils.md5DigestAsHex(newPassword.getBytes()));
             usersRepo.save(users);
 
@@ -262,5 +265,10 @@ public class UserServiceImpl implements UsersService {
         } catch (Exception e) {
             throw new RuntimeException("Internal server error: " + e.getMessage(), e);
         }
+    }
+
+    @Override
+    public List<Users> getAllUsers() {
+        return usersRepo.findAll();
     }
 }

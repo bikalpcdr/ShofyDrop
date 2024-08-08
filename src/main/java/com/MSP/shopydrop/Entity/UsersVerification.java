@@ -25,5 +25,4 @@ public class UsersVerification {
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "users_id", referencedColumnName = "id")
     private Users users;
-
 }
